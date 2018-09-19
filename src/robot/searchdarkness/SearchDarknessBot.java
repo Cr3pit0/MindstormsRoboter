@@ -1,4 +1,5 @@
-package Lejos;
+
+package robot.searchdarkness;
 
 import lejos.hardware.motor.Motor;
 import lejos.hardware.port.Port;
@@ -7,9 +8,9 @@ import lejos.hardware.sensor.EV3ColorSensor;
 import lejos.robotics.RegulatedMotor;
 import lejos.robotics.SampleProvider;
 
-public class FollowBlackLineBot {
+public class SearchDarknessBot {
 
-	static BlackLineSensor sensor1;
+	static SearchDarknessSensor sensor1;
 
 	static RegulatedMotor leftMotor = Motor.B;
 	static RegulatedMotor rightMotor = Motor.C;
@@ -17,7 +18,7 @@ public class FollowBlackLineBot {
 
 	public static void main(String[] args) throws InterruptedException {
 
-		sensor1 = new BlackLineSensor(SensorPort.S1);
+		sensor1 = new SearchDarknessSensor(SensorPort.S1);
 		sensor1.setDaemon(true);
 		sensor1.start();
 
@@ -31,13 +32,19 @@ public class FollowBlackLineBot {
 //		rightMotor.setAcceleration(800);
 
 		while (true) {
-			while(sensor1.blackLineFound) {
-				System.out.println("Gefunden, " +  sensor1.intensity);
-//				drive(0, 0);
+			
+			boolean goLeft = true; 
+			
+			while(sensor1.isGoingDarker) {
+				System.out.println("Dunkler, " +  sensor1.intensity);
+				
+//				drive(0, 20);
+//				drive(1, 20);
 			}
 
-			while(sensor1.blackLineFound == false) {
-				System.out.println("Und weg..., " +  sensor1.intensity);
+			while(sensor1.isGoingDarker == false) {
+				System.out.println("Heller, " +  sensor1.intensity);
+				
 //				drive(3, 0);
 //				drive(1, 90);
 //				drive(2, 90);
@@ -57,8 +64,8 @@ public class FollowBlackLineBot {
 		if (rotateProzent > 0) {
 			switch (Richtung) {
 			case 0:
-				FollowBlackLineBot.leftMotor.forward();
-				FollowBlackLineBot.rightMotor.forward();
+				FollowBlackLineBot.leftMotor.rotate(rotateProzent);
+				FollowBlackLineBot.rightMotor.rotate(rotateProzent);
 			case 1:
 				FollowBlackLineBot.leftMotor.rotate(rotateProzent, true);
 				FollowBlackLineBot.rightMotor.rotate(-rotateProzent);
@@ -66,8 +73,8 @@ public class FollowBlackLineBot {
 				FollowBlackLineBot.leftMotor.rotate(-rotateProzent, true);
 				FollowBlackLineBot.rightMotor.rotate(rotateProzent);
 			case 3:
-				FollowBlackLineBot.leftMotor.backward();
-				FollowBlackLineBot.rightMotor.backward();
+				FollowBlackLineBot.leftMotor.rotate(-rotateProzent);
+				FollowBlackLineBot.rightMotor.rotate(-rotateProzent);
 			default:
 				FollowBlackLineBot.leftMotor.stop();
 				FollowBlackLineBot.rightMotor.stop();
@@ -96,22 +103,19 @@ public class FollowBlackLineBot {
 	}
 }
 
-class BlackLineSensor extends Thread {
+class SearchDarknessSensor extends Thread {
 
 	public float intensity = 255;
-	
-	public float minimum; 
-	public static float minimumRange = 0.2f;
-	public float maximum;
-	public static float maximumRange = 0.2f;
-	public boolean blackLineFound = false; 
+	public float minimum;
+	public boolean isGoingDarker = false; 
 	
 	EV3ColorSensor colorSensor;
 	SampleProvider sp;
 
-	BlackLineSensor(Port port) {
+	SearchDarknessSensor(Port port) {
 		colorSensor = new EV3ColorSensor(port);
 		sp = colorSensor.getRedMode();
+		minimum = Float.POSITIVE_INFINITY;
 	}
 
 	public void run() {
@@ -119,7 +123,7 @@ class BlackLineSensor extends Thread {
 			float[] sample = new float[sp.sampleSize()];
 			sp.fetchSample(sample, 0);
 			intensity = (float) sample[0];
-			blackLineFound = intensity < minimum + minimumRange;
+			isGoingDarker = intensity < minimum;
 		}
 	}
 }

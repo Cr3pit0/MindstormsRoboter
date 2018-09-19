@@ -1,4 +1,4 @@
-package Lejos;
+package robot.gogo;
 
 import lejos.hardware.Button;
 import lejos.hardware.ev3.LocalEV3;
