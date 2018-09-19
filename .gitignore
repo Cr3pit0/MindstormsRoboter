@@ -1,0 +1,17 @@
+/bin/
+/target/
+/.idea/
+/.settings/
+/out/
+/index-files/
+/de/
+
+*.bat
+*.classpath
+*.css
+*.html
+*.iml
+*.jar
+*.js
+*.project
+*.txt
