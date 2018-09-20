@@ -1,126 +1,116 @@
 package robot.linefollower;
 
-import lejos.hardware.motor.Motor;
 import lejos.hardware.port.Port;
 import lejos.hardware.port.SensorPort;
 import lejos.hardware.sensor.EV3ColorSensor;
-import lejos.robotics.RegulatedMotor;
 import lejos.robotics.SampleProvider;
+import lejos.robotics.navigation.MovePilot;
+import lejos.robotics.subsumption.Arbitrator;
+import lejos.robotics.subsumption.Behavior;
+import robot.PilotFactory;
 
 public class LineFollower {
 
-	static BlackLineSensor sensor1;
+    static final float WHITE_THRESHOLD = .6f;
+    static final float BLACK_THRESHOLD = .3f;
 
-	static RegulatedMotor leftMotor = Motor.B;
-	static RegulatedMotor rightMotor = Motor.C;
+    private static final Port LIGHT_SENSOR_PORT = SensorPort.S1;
 
+    static MovePilot pilot;
+    static AmbientLightSensor sensor;
 
-	public static void main(String[] args) throws InterruptedException {
+    public static void main(String[] args) {
+        pilot = PilotFactory.generate();
 
-		sensor1 = new BlackLineSensor(SensorPort.S1);
-		sensor1.setDaemon(true);
-		sensor1.start();
+        sensor = new AmbientLightSensor(LIGHT_SENSOR_PORT);
+        Thread t = new Thread(sensor);
+        t.start();
 
-//		leftMotor.resetTachoCount();
-//		rightMotor.resetTachoCount();
-//		leftMotor.rotateTo(0);
-//		rightMotor.rotateTo(0);
-//		leftMotor.setSpeed(400);
-//		rightMotor.setSpeed(400);
-//		leftMotor.setAcceleration(800);
-//		rightMotor.setAcceleration(800);
-
-		while (true) {
-			while(sensor1.blackLineFound) {
-				System.out.println("Gefunden, " +  sensor1.intensity);
-//				drive(0, 0);
-			}
-
-			while(sensor1.blackLineFound == false) {
-				System.out.println("Und weg..., " +  sensor1.intensity);
-//				drive(3, 0);
-//				drive(1, 90);
-//				drive(2, 90);
-//				drive(2, 90);
-//				drive(1, 90);
-			}
-		}
-	}
-
-	public static void drive(int Richtung, int rotateProzent) {
-
-		// Vorne = 0
-		// Zur¸ck = 3
-		// Links = 1
-		// Rechts = 2
-
-		if (rotateProzent > 0) {
-			switch (Richtung) {
-			case 0:
-				LineFollower.leftMotor.forward();
-				LineFollower.rightMotor.forward();
-			case 1:
-				LineFollower.leftMotor.rotate(rotateProzent, true);
-				LineFollower.rightMotor.rotate(-rotateProzent);
-			case 2:
-				LineFollower.leftMotor.rotate(-rotateProzent, true);
-				LineFollower.rightMotor.rotate(rotateProzent);
-			case 3:
-				LineFollower.leftMotor.backward();
-				LineFollower.rightMotor.backward();
-			default:
-				LineFollower.leftMotor.stop();
-				LineFollower.rightMotor.stop();
-				break;
-			}
-		} else {
-			switch (Richtung) {
-			case 0:
-				LineFollower.leftMotor.forward();
-				LineFollower.rightMotor.forward();
-			case 1:
-				LineFollower.leftMotor.forward();
-				LineFollower.rightMotor.backward();
-			case 2:
-				LineFollower.leftMotor.backward();
-				LineFollower.rightMotor.forward();
-			case 3:
-				LineFollower.leftMotor.backward();
-				LineFollower.rightMotor.backward();
-			default:
-				LineFollower.leftMotor.stop();
-				LineFollower.rightMotor.stop();
-				break;
-			}
-		}
-	}
+        Arbitrator a = new Arbitrator(new Behavior[] { new DriveStraight(), new TurnRight(), new TurnLeft() }, true);
+        a.go();
+    }
 }
 
-class BlackLineSensor extends Thread {
+class DriveStraight implements Behavior {
 
-	public float intensity = 255;
-	
-	public float minimum; 
-	public static float minimumRange = 0.2f;
-	public float maximum;
-	public static float maximumRange = 0.2f;
-	public boolean blackLineFound = false; 
-	
-	EV3ColorSensor colorSensor;
-	SampleProvider sp;
+    @Override
+    public boolean takeControl() {
+        return true;
+    }
 
-	BlackLineSensor(Port port) {
-		colorSensor = new EV3ColorSensor(port);
-		sp = colorSensor.getRedMode();
-	}
+    @Override
+    public void suppress() {
+        LineFollower.pilot.stop();
+    }
 
-	@Override
+    @Override
+    public void action() {
+        LineFollower.pilot.forward();
+    }
+}
+
+class TurnLeft implements Behavior {
+
+    private boolean suppressed = false;
+
+    @Override
+    public boolean takeControl() {
+        return LineFollower.sensor.level > LineFollower.WHITE_THRESHOLD; // sensor erkennt weiﬂ
+    }
+
+    @Override
+    public void suppress() {
+        suppressed = true; // standard practice for suppress methods
+    }
+
+    @Override
+    public void action() {
+        suppressed = false;
+        while (!suppressed) {
+            LineFollower.pilot.rotate(5);
+        }
+    }
+}
+
+class TurnRight implements Behavior {
+
+    private boolean suppressed = false;
+
+    @Override
+    public boolean takeControl() {
+        return LineFollower.sensor.level < LineFollower.BLACK_THRESHOLD; // sensor erkennt schwarz
+    }
+
+    @Override
+    public void suppress() {
+        suppressed = true; // standard practice for suppress methods
+    }
+
+    @Override
+    public void action() {
+        suppressed = false;
+        while (!suppressed) {
+            LineFollower.pilot.rotate(-5);
+        }
+    }
+}
+
+class AmbientLightSensor implements Runnable {
+
+    float level;
+    private SampleProvider sp;
+
+    public AmbientLightSensor(Port port) {
+        EV3ColorSensor pro = new EV3ColorSensor(port);
+        sp = pro.getAmbientMode();
+    }
+
+    @Override
     public void run() {
-		while (true) {
-			float[] sample = new float[sp.sampleSize()];
-			sp.fetchSample(sample, 0);
-			intensity = sample[0];
-			blackLineFound = intensity < minimum + minimumRange;
-		}
-	}
+        while (true) {
+            float[] sample = new float[sp.sampleSize()];
+            sp.fetchSample(sample, 0);
+            level = (int) sample[0];
+        }
+    }
 }
