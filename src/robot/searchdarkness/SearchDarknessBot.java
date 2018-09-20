@@ -1,129 +1,103 @@
-
 package robot.searchdarkness;
 
-import lejos.hardware.motor.Motor;
 import lejos.hardware.port.Port;
 import lejos.hardware.port.SensorPort;
 import lejos.hardware.sensor.EV3ColorSensor;
-import lejos.robotics.RegulatedMotor;
 import lejos.robotics.SampleProvider;
+import lejos.robotics.navigation.MovePilot;
+import lejos.robotics.subsumption.Arbitrator;
+import lejos.robotics.subsumption.Behavior;
+import robot.PilotFactory;
 
 public class SearchDarknessBot {
 
-	static SearchDarknessSensor sensor1;
+    static final Port LIGHT_SENSOR_PORT = SensorPort.S1;
 
-	static RegulatedMotor leftMotor = Motor.B;
-	static RegulatedMotor rightMotor = Motor.C;
+    static MovePilot pilot;
+    static Sensor sensor;
 
+    public static void main(String[] args) {
+        pilot = PilotFactory.generate();
 
-	public static void main(String[] args) throws InterruptedException {
+        Thread t = new Thread(sensor);
+        t.start();
 
-		sensor1 = new SearchDarknessSensor(SensorPort.S1);
-		sensor1.setDaemon(true);
-		sensor1.start();
-
-//		leftMotor.resetTachoCount();
-//		rightMotor.resetTachoCount();
-//		leftMotor.rotateTo(0);
-//		rightMotor.rotateTo(0);
-//		leftMotor.setSpeed(400);
-//		rightMotor.setSpeed(400);
-//		leftMotor.setAcceleration(800);
-//		rightMotor.setAcceleration(800);
-
-		while (true) {
-			
-			boolean goLeft = true; 
-			
-			while(sensor1.isGoingDarker) {
-				System.out.println("Dunkler, " +  sensor1.intensity);
-				
-//				drive(0, 20);
-//				drive(1, 20);
-			}
-
-			while(sensor1.isGoingDarker == false) {
-				System.out.println("Heller, " +  sensor1.intensity);
-				
-//				drive(3, 0);
-//				drive(1, 90);
-//				drive(2, 90);
-//				drive(2, 90);
-//				drive(1, 90);
-			}
-		}
-	}
-
-	public static void drive(int Richtung, int rotateProzent) {
-
-		// Vorne = 0
-		// Zur¸ck = 3
-		// Links = 1
-		// Rechts = 2
-
-		if (rotateProzent > 0) {
-			switch (Richtung) {
-			case 0:
-				FollowBlackLineBot.leftMotor.rotate(rotateProzent);
-				FollowBlackLineBot.rightMotor.rotate(rotateProzent);
-			case 1:
-				FollowBlackLineBot.leftMotor.rotate(rotateProzent, true);
-				FollowBlackLineBot.rightMotor.rotate(-rotateProzent);
-			case 2:
-				FollowBlackLineBot.leftMotor.rotate(-rotateProzent, true);
-				FollowBlackLineBot.rightMotor.rotate(rotateProzent);
-			case 3:
-				FollowBlackLineBot.leftMotor.rotate(-rotateProzent);
-				FollowBlackLineBot.rightMotor.rotate(-rotateProzent);
-			default:
-				FollowBlackLineBot.leftMotor.stop();
-				FollowBlackLineBot.rightMotor.stop();
-				break;
-			}
-		} else {
-			switch (Richtung) {
-			case 0:
-				FollowBlackLineBot.leftMotor.forward();
-				FollowBlackLineBot.rightMotor.forward();
-			case 1:
-				FollowBlackLineBot.leftMotor.forward();
-				FollowBlackLineBot.rightMotor.backward();
-			case 2:
-				FollowBlackLineBot.leftMotor.backward();
-				FollowBlackLineBot.rightMotor.forward();
-			case 3:
-				FollowBlackLineBot.leftMotor.backward();
-				FollowBlackLineBot.rightMotor.backward();
-			default:
-				FollowBlackLineBot.leftMotor.stop();
-				FollowBlackLineBot.rightMotor.stop();
-				break;
-			}
-		}
-	}
+        Arbitrator a = new Arbitrator(new Behavior[] { new Turn(), new DriveStraight() }, true);
+        a.go();
+    }
 }
 
-class SearchDarknessSensor extends Thread {
+class DriveStraight implements Behavior {
+    private boolean suppressed = false;
 
-	public float intensity = 255;
-	public float minimum;
-	public boolean isGoingDarker = false; 
-	
-	EV3ColorSensor colorSensor;
-	SampleProvider sp;
+    @Override
+    public boolean takeControl() {
+        // sensor erkennt Mischung aus weiﬂ und schwarz
+        return SearchDarknessBot.sensor.darker;
+    }
 
-	SearchDarknessSensor(Port port) {
-		colorSensor = new EV3ColorSensor(port);
-		sp = colorSensor.getRedMode();
-		minimum = Float.POSITIVE_INFINITY;
-	}
+    @Override
+    public void suppress() {
+        suppressed = true;
+    }
 
-	public void run() {
-		while (true) {
-			float[] sample = new float[sp.sampleSize()];
-			sp.fetchSample(sample, 0);
-			intensity = (float) sample[0];
-			isGoingDarker = intensity < minimum;
-		}
-	}
+    @Override
+    public void action() {
+        suppressed = false;
+        while (true) {
+            if (suppressed || !SearchDarknessBot.sensor.darker) {
+                SearchDarknessBot.pilot.stop();
+                break;
+            }
+            SearchDarknessBot.pilot.forward();
+        }
+    }
+}
+
+class Turn implements Behavior {
+    private boolean suppressed = false;
+    private int direction = -1; // left : -1, right = 1
+
+    @Override
+    public boolean takeControl() {
+        return !SearchDarknessBot.sensor.darker;
+    }
+
+    @Override
+    public void suppress() {
+        suppressed = true;
+    }
+
+    @Override
+    public void action() {
+        suppressed = false;
+        while (!suppressed) {
+            float current = SearchDarknessBot.sensor.currentLevel;
+            SearchDarknessBot.pilot.rotate(direction * 5); // drehe 5 Grad in bevorzugte Richtung
+            if (SearchDarknessBot.sensor.currentLevel > current) { // falls heller nach Drehung
+                direction *= -1; // aendere bevorzugte Richtung
+                SearchDarknessBot.pilot.rotate(direction * 10); // Drehe 10 Grad in neue bevorzugte Richtung
+            }
+        }
+    }
+}
+
+class Sensor implements Runnable {
+    private SampleProvider sp;
+    private float darkest = 1;
+    float currentLevel;
+    boolean darker = true;
+
+    @Override
+    public void run() {
+        EV3ColorSensor pro = new EV3ColorSensor(SearchDarknessBot.LIGHT_SENSOR_PORT);
+        sp = pro.getAmbientMode();
+        while (true) {
+            float[] sample = new float[sp.sampleSize()];
+            sp.fetchSample(sample, 0);
+            currentLevel = sample[0];
+            darker = currentLevel < darkest;
+            darkest = darker ? currentLevel : darkest;
+        }
+    }
 }
