@@ -7,7 +7,7 @@ import lejos.hardware.sensor.EV3ColorSensor;
 import lejos.robotics.RegulatedMotor;
 import lejos.robotics.SampleProvider;
 
-public class FollowBlackLineBot {
+public class LineFollower {
 
 	static BlackLineSensor sensor1;
 
@@ -57,39 +57,39 @@ public class FollowBlackLineBot {
 		if (rotateProzent > 0) {
 			switch (Richtung) {
 			case 0:
-				FollowBlackLineBot.leftMotor.forward();
-				FollowBlackLineBot.rightMotor.forward();
+				LineFollower.leftMotor.forward();
+				LineFollower.rightMotor.forward();
 			case 1:
-				FollowBlackLineBot.leftMotor.rotate(rotateProzent, true);
-				FollowBlackLineBot.rightMotor.rotate(-rotateProzent);
+				LineFollower.leftMotor.rotate(rotateProzent, true);
+				LineFollower.rightMotor.rotate(-rotateProzent);
 			case 2:
-				FollowBlackLineBot.leftMotor.rotate(-rotateProzent, true);
-				FollowBlackLineBot.rightMotor.rotate(rotateProzent);
+				LineFollower.leftMotor.rotate(-rotateProzent, true);
+				LineFollower.rightMotor.rotate(rotateProzent);
 			case 3:
-				FollowBlackLineBot.leftMotor.backward();
-				FollowBlackLineBot.rightMotor.backward();
+				LineFollower.leftMotor.backward();
+				LineFollower.rightMotor.backward();
 			default:
-				FollowBlackLineBot.leftMotor.stop();
-				FollowBlackLineBot.rightMotor.stop();
+				LineFollower.leftMotor.stop();
+				LineFollower.rightMotor.stop();
 				break;
 			}
 		} else {
 			switch (Richtung) {
 			case 0:
-				FollowBlackLineBot.leftMotor.forward();
-				FollowBlackLineBot.rightMotor.forward();
+				LineFollower.leftMotor.forward();
+				LineFollower.rightMotor.forward();
 			case 1:
-				FollowBlackLineBot.leftMotor.forward();
-				FollowBlackLineBot.rightMotor.backward();
+				LineFollower.leftMotor.forward();
+				LineFollower.rightMotor.backward();
 			case 2:
-				FollowBlackLineBot.leftMotor.backward();
-				FollowBlackLineBot.rightMotor.forward();
+				LineFollower.leftMotor.backward();
+				LineFollower.rightMotor.forward();
 			case 3:
-				FollowBlackLineBot.leftMotor.backward();
-				FollowBlackLineBot.rightMotor.backward();
+				LineFollower.leftMotor.backward();
+				LineFollower.rightMotor.backward();
 			default:
-				FollowBlackLineBot.leftMotor.stop();
-				FollowBlackLineBot.rightMotor.stop();
+				LineFollower.leftMotor.stop();
+				LineFollower.rightMotor.stop();
 				break;
 			}
 		}
@@ -114,11 +114,12 @@ class BlackLineSensor extends Thread {
 		sp = colorSensor.getRedMode();
 	}
 
-	public void run() {
+	@Override
+    public void run() {
 		while (true) {
 			float[] sample = new float[sp.sampleSize()];
 			sp.fetchSample(sample, 0);
-			intensity = (float) sample[0];
+			intensity = sample[0];
 			blackLineFound = intensity < minimum + minimumRange;
 		}
 	}
