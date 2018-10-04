@@ -4,113 +4,75 @@ import lejos.hardware.port.Port;
 import lejos.hardware.port.SensorPort;
 import lejos.hardware.sensor.EV3ColorSensor;
 import lejos.robotics.SampleProvider;
-import lejos.robotics.navigation.MovePilot;
-import lejos.robotics.subsumption.Arbitrator;
-import lejos.robotics.subsumption.Behavior;
-import robot.PilotFactory;
+import robot.Pilot;
 
 public class LineFollower {
 
-    static final float WHITE_THRESHOLD = .6f;
-    static final float BLACK_THRESHOLD = .3f;
+	static final float THRESHOLD = .3f;
+	static final Port LIGHT_SENSOR_PORT = SensorPort.S1;
 
-    private static final Port LIGHT_SENSOR_PORT = SensorPort.S1;
+	private AmbientLightSensor sensor;
+	private Pilot pilot;
 
-    static MovePilot pilot;
-    static AmbientLightSensor sensor;
+	private boolean leftCurve;
+	private boolean rightCurve;
 
-    public static void main(String[] args) {
-        pilot = PilotFactory.generate();
+	public static void main(String[] args) {
+		new LineFollower();
+	}
 
-        sensor = new AmbientLightSensor(LIGHT_SENSOR_PORT);
-        Thread t = new Thread(sensor);
-        t.start();
+	public LineFollower() {
+		leftCurve = false;
+		rightCurve = false;
+		pilot = new Pilot(80);
 
-        Arbitrator a = new Arbitrator(new Behavior[] { new DriveStraight(), new TurnRight(), new TurnLeft() }, true);
-        a.go();
-    }
-}
+		sensor = new AmbientLightSensor();
+		Thread t = new Thread(sensor);
+		t.start();
 
-class DriveStraight implements Behavior {
+		while (true) {
+			if (sensor.ready)
+				move(sensor.level);
+		}
+	}
 
-    @Override
-    public boolean takeControl() {
-        return true;
-    }
-
-    @Override
-    public void suppress() {
-        LineFollower.pilot.stop();
-    }
-
-    @Override
-    public void action() {
-        LineFollower.pilot.forward();
-    }
-}
-
-class TurnLeft implements Behavior {
-
-    private boolean suppressed = false;
-
-    @Override
-    public boolean takeControl() {
-        return LineFollower.sensor.level > LineFollower.WHITE_THRESHOLD; // sensor erkennt weiﬂ
-    }
-
-    @Override
-    public void suppress() {
-        suppressed = true; // standard practice for suppress methods
-    }
-
-    @Override
-    public void action() {
-        suppressed = false;
-        while (!suppressed) {
-            LineFollower.pilot.rotate(5);
-        }
-    }
-}
-
-class TurnRight implements Behavior {
-
-    private boolean suppressed = false;
-
-    @Override
-    public boolean takeControl() {
-        return LineFollower.sensor.level < LineFollower.BLACK_THRESHOLD; // sensor erkennt schwarz
-    }
-
-    @Override
-    public void suppress() {
-        suppressed = true; // standard practice for suppress methods
-    }
-
-    @Override
-    public void action() {
-        suppressed = false;
-        while (!suppressed) {
-            LineFollower.pilot.rotate(-5);
-        }
-    }
+	public void move(float level) {
+		if (sensor.level < THRESHOLD - .2 || rightCurve && sensor.level < THRESHOLD) {
+			System.out.println("right: " + level);
+			rightCurve = true;
+			pilot.spinRight();
+		} else if (sensor.level > THRESHOLD + .2 || leftCurve && sensor.level > THRESHOLD) {
+			System.out.println("left: " + level);
+			leftCurve = true;
+			pilot.spinLeft();
+		} else {
+			System.out.println("straight: " + level);
+			leftCurve = false;
+			rightCurve = false;
+			pilot.forward();
+		}
+	}
 }
 
 class AmbientLightSensor implements Runnable {
 
-    float level;
-    private SampleProvider sp;
+	float level;
+	boolean ready;
+	private SampleProvider sp;
 
-    public AmbientLightSensor(Port port) {
-        EV3ColorSensor pro = new EV3ColorSensor(port);
-        sp = pro.getAmbientMode();
-    }
+	public AmbientLightSensor() {
+		ready = false;
+	}
 
-    @Override
-    public void run() {
-        while (true) {
-            float[] sample = new float[sp.sampleSize()];
-            sp.fetchSample(sample, 0);
-            level = (int) sample[0];
-        }
-    }
+	@Override
+	public void run() {
+		EV3ColorSensor pro = new EV3ColorSensor(LineFollower.LIGHT_SENSOR_PORT);
+		sp = pro.getRedMode();
+		ready = true;
+		while (true) {
+			float[] sample = new float[sp.sampleSize()];
+			sp.fetchSample(sample, 0);
+			level = sample[0];
+		}
+	}
 }
