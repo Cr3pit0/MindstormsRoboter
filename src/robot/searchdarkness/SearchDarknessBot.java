@@ -4,100 +4,75 @@ import lejos.hardware.port.Port;
 import lejos.hardware.port.SensorPort;
 import lejos.hardware.sensor.EV3ColorSensor;
 import lejos.robotics.SampleProvider;
-import lejos.robotics.navigation.MovePilot;
-import lejos.robotics.subsumption.Arbitrator;
-import lejos.robotics.subsumption.Behavior;
-import robot.PilotFactory;
+import robot.Pilot;
 
 public class SearchDarknessBot {
 
-    static final Port LIGHT_SENSOR_PORT = SensorPort.S1;
+	static final Port LIGHT_SENSOR_PORT = SensorPort.S1;
+	
+	static final int ROTATE_ANGLE = 5;
+	static final int TRAVEL_DISTANCE = 15;
 
-    static MovePilot pilot;
-    static Sensor sensor;
+	public static void main(String[] args) {
+		Pilot pilot = new Pilot(40);
+		int direction = -1;
+		boolean finished = false;
 
-    public static void main(String[] args) {
-        pilot = PilotFactory.generate();
+		Sensor sensor = new Sensor();
+		Thread t = new Thread(sensor);
+		t.start();
 
-        Thread t = new Thread(sensor);
-        t.start();
-
-        Arbitrator a = new Arbitrator(new Behavior[] { new Turn(), new DriveStraight() }, true);
-        a.go();
-    }
-}
-
-class DriveStraight implements Behavior {
-    private boolean suppressed = false;
-
-    @Override
-    public boolean takeControl() {
-        // sensor erkennt Mischung aus weiß und schwarz
-        return SearchDarknessBot.sensor.darker;
-    }
-
-    @Override
-    public void suppress() {
-        suppressed = true;
-    }
-
-    @Override
-    public void action() {
-        suppressed = false;
-        while (true) {
-            if (suppressed || !SearchDarknessBot.sensor.darker) {
-                SearchDarknessBot.pilot.stop();
-                break;
-            }
-            SearchDarknessBot.pilot.forward();
-        }
-    }
-}
-
-class Turn implements Behavior {
-    private boolean suppressed = false;
-    private int direction = -1; // left : -1, right = 1
-
-    @Override
-    public boolean takeControl() {
-        return !SearchDarknessBot.sensor.darker;
-    }
-
-    @Override
-    public void suppress() {
-        suppressed = true;
-    }
-
-    @Override
-    public void action() {
-        suppressed = false;
-        while (!suppressed) {
-            float current = SearchDarknessBot.sensor.currentLevel;
-            SearchDarknessBot.pilot.rotate(direction * 5); // drehe 5 Grad in bevorzugte Richtung
-            if (SearchDarknessBot.sensor.currentLevel > current) { // falls heller nach Drehung
-                direction *= -1; // aendere bevorzugte Richtung
-                SearchDarknessBot.pilot.rotate(direction * 10); // Drehe 10 Grad in neue bevorzugte Richtung
-            }
-        }
-    }
+		while (!finished) {
+			if (!sensor.ready) {
+				continue;
+			}
+			if (sensor.darker) {
+				pilot.forward();
+			} else {
+				float current = sensor.currentLevel;
+				pilot.rotateBy(direction * ROTATE_ANGLE); // drehe 5 Grad in bevorzugte Richtung
+				pilot.drive(TRAVEL_DISTANCE);
+				if (sensor.currentLevel > current) { // falls heller nach Drehung
+					direction *= -1; // aendere bevorzugte Richtung
+					pilot.drive(-TRAVEL_DISTANCE);
+					pilot.rotateBy(direction * ROTATE_ANGLE * 2); // drehe 10 Grad in neue bevorzugte Richtung
+					pilot.drive(TRAVEL_DISTANCE);
+					if (sensor.currentLevel < 0.04) {
+						sensor.finished = true;
+						return;
+					}
+				}
+			}
+		}
+	}
 }
 
 class Sensor implements Runnable {
-    private SampleProvider sp;
-    private float darkest = 1;
-    float currentLevel;
-    boolean darker = true;
+	float currentLevel;
+	boolean darker = true;
+	boolean ready = false;
 
-    @Override
-    public void run() {
-        EV3ColorSensor pro = new EV3ColorSensor(SearchDarknessBot.LIGHT_SENSOR_PORT);
-        sp = pro.getAmbientMode();
-        while (true) {
-            float[] sample = new float[sp.sampleSize()];
-            sp.fetchSample(sample, 0);
-            currentLevel = sample[0];
-            darker = currentLevel < darkest;
-            darkest = darker ? currentLevel : darkest;
-        }
-    }
+	boolean finished = false;
+
+	@Override
+	public void run() {
+		EV3ColorSensor pro = new EV3ColorSensor(SearchDarknessBot.LIGHT_SENSOR_PORT);
+		SampleProvider sp = pro.getRGBMode();
+//		SampleProvider sp = pro.getRedMode();
+		float darkest = 1;
+		ready = true;
+		while (!finished) {
+			float[] sample = new float[sp.sampleSize()];
+			sp.fetchSample(sample, 0);
+			float r = sample[0];
+			float g = sample[1];
+			float b = sample[2];
+			currentLevel = r + b + g;
+//			currentLevel = sample[0];
+			System.out.println(currentLevel);
+			darker = currentLevel < darkest;
+			darkest = darker ? currentLevel : darkest;
+		}
+		pro.close();
+	}
 }
