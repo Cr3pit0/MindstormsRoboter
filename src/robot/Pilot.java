@@ -8,6 +8,8 @@ public class Pilot {
 	private RegulatedMotor left;
 	private RegulatedMotor right;
 
+	private double wheelCircumference;
+
 	private boolean moving;
 	private boolean spinningRight;
 	private boolean spinningLeft;
@@ -15,6 +17,8 @@ public class Pilot {
 	public Pilot(int speed) {
 		left = Motor.A;
 		right = Motor.D;
+
+		wheelCircumference = 2 * Math.PI * 28;
 
 		left.setSpeed(speed);
 		right.setSpeed(speed);
@@ -53,10 +57,13 @@ public class Pilot {
 	}
 
 	public void drive(int distance) {
+		if (moving) {
+			return;
+		}
 		stop();
 		moving = true;
-		left.rotate(distance, true);
-		right.rotate(distance);
+		left.rotate((int) (360 * (distance / wheelCircumference) * 10), true);
+		right.rotate((int) (360 * (distance / wheelCircumference) * 10));
 		moving = false;
 	}
 
@@ -69,6 +76,9 @@ public class Pilot {
 	}
 
 	public void rotateRightBy(int angle) {
+		if (moving) {
+			return;
+		}
 		stop();
 		moving = true;
 		left.rotate(angle * 2, true);
@@ -77,6 +87,9 @@ public class Pilot {
 	}
 
 	public void rotateLeftBy(int angle) {
+		if (moving) {
+			return;
+		}
 		stop();
 		moving = true;
 		left.rotate(-angle * 2, true);
@@ -90,7 +103,6 @@ public class Pilot {
 		}
 		stop();
 		spinningRight = true;
-		System.out.println("right");
 		left.forward();
 		right.backward();
 	}
@@ -101,7 +113,6 @@ public class Pilot {
 		}
 		stop();
 		spinningLeft = true;
-		System.out.println("left");
 		left.backward();
 		right.forward();
 	}
