@@ -1,8 +1,6 @@
 package robot.canbringer;
 
 import lejos.hardware.Button;
-import lejos.hardware.Key;
-import lejos.hardware.KeyListener;
 import lejos.hardware.motor.Motor;
 import lejos.hardware.port.MotorPort;
 import lejos.hardware.port.Port;
@@ -13,7 +11,6 @@ import lejos.robotics.chassis.WheeledChassis;
 import lejos.robotics.localization.OdometryPoseProvider;
 import lejos.robotics.navigation.MovePilot;
 import lejos.robotics.navigation.Navigator;
-import lejos.robotics.navigation.Pose;
 import lejos.robotics.subsumption.Arbitrator;
 import lejos.robotics.subsumption.Behavior;
 
@@ -26,7 +23,7 @@ public class CanBringer {
     static final Port CLAW_MOTOR = MotorPort.C;
 
     private Arbitrator arbitrator;
-    private ShutdownBehavior sd;
+    private StartupBehavior su;
     private SearchCanBehavior sc;
     private BringCanHomeBehavior bc;
 
@@ -52,20 +49,6 @@ public class CanBringer {
                 Button.LEDPattern(2);
                 Button.waitForAnyPress();
                 System.out.println("start");
-
-                Button.ENTER.addKeyListener(new KeyListener() {
-
-                    @Override
-                    public void keyReleased(Key k) {
-                    }
-
-                    @Override
-                    public void keyPressed(Key k) {
-                        sc.suppress();
-                        bc.suppress();
-                        sd.shutdown();
-                    }
-                });
                 arbitrator.go();
 
             }
@@ -87,10 +70,10 @@ public class CanBringer {
         gyro = new GyroSensor(startupCompletionListener, GYRO_SENSOR);
         color = new ColorSensor(startupCompletionListener, COLOR_SENSOR);
 
-        sd = new ShutdownBehavior(this);
+        su = new StartupBehavior(this);
         sc = new SearchCanBehavior(this);
         bc = new BringCanHomeBehavior(this);
-        arbitrator = new Arbitrator(new Behavior[] { sc, bc, sd });
+        arbitrator = new Arbitrator(new Behavior[] { sc, bc, su });
 
         new Thread(ultrasonic).start();
         new Thread(gyro).start();
@@ -115,36 +98,6 @@ public class CanBringer {
 
     public Claw getClaw() {
         return claw;
-    }
-}
-
-class BringCanHomeBehavior implements Behavior {
-
-    private boolean suppressed = false;
-
-    private CanBringer cb;
-
-    public BringCanHomeBehavior(CanBringer cb) {
-        this.cb = cb;
-    }
-
-    @Override
-    public boolean takeControl() {
-        return false; // TODO hasCan()?
-    }
-
-    @Override
-    public void action() {
-        suppressed = false;
-
-        while (!suppressed) {
-            // do something
-        }
-    }
-
-    @Override
-    public void suppress() {
-        suppressed = true;
     }
 }
 
@@ -197,24 +150,19 @@ class SearchCanBehavior implements Behavior {
     }
 }
 
-class ShutdownBehavior implements Behavior {
+class BringCanHomeBehavior implements Behavior {
 
     private boolean suppressed = false;
-    private boolean shutdown = false;
 
     private CanBringer cb;
 
-    public ShutdownBehavior(CanBringer cb) {
+    public BringCanHomeBehavior(CanBringer cb) {
         this.cb = cb;
-    }
-
-    void shutdown() {
-        shutdown = true;
     }
 
     @Override
     public boolean takeControl() {
-        return shutdown;
+        return false; // TODO hasCan()?
     }
 
     @Override
@@ -222,13 +170,38 @@ class ShutdownBehavior implements Behavior {
         suppressed = false;
 
         while (!suppressed) {
-            cb.getClaw().close();
-            System.exit(0);
+            // do something
         }
     }
 
     @Override
     public void suppress() {
         suppressed = true;
+    }
+}
+
+class StartupBehavior implements Behavior {
+
+    private boolean initialized = false;
+
+    private CanBringer cb;
+
+    public StartupBehavior(CanBringer cb) {
+        this.cb = cb;
+    }
+
+    @Override
+    public boolean takeControl() {
+        return !initialized;
+    }
+
+    @Override
+    public void action() {
+        cb.getClaw().close();
+        initialized = true;
+    }
+
+    @Override
+    public void suppress() {
     }
 }

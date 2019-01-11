@@ -11,7 +11,7 @@ public class Claw {
 
     public Claw(Port motor) {
         this.motor = Motor.C;
-        closed = true;
+        closed = false;
     }
 
     public void open() {
@@ -31,10 +31,10 @@ public class Claw {
     public void close() {
         if (!closed) {
             motor.rotate(-2000, true);
+            while (!motor.isStalled()) {
+            }
+            motor.stop();
         }
-        while (!motor.isStalled()) {
-        }
-        motor.stop();
         closed = true;
     }
     
