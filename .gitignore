@@ -6,6 +6,7 @@
 /index-files/
 /de/
 
+*.class
 *.bat
 *.classpath
 *.css
