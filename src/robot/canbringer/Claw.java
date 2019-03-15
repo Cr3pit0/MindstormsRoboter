@@ -3,6 +3,8 @@ package robot.canbringer;
 import lejos.hardware.motor.Motor;
 import lejos.hardware.port.Port;
 import lejos.robotics.RegulatedMotor;
+import robot.Level;
+import robot.Logger;
 
 public class Claw {
 
@@ -15,10 +17,12 @@ public class Claw {
     }
 
     public void open() {
+        Logger.log(Level.INFO, "Open claw");
         if (closed) {
             motor.rotate(900, false);
         }
         closed = false;
+        Logger.log(Level.INFO, "Claw opened");
 //        if (closed) {
 //            motor.rotate(2000, true);
 //        }
@@ -29,6 +33,7 @@ public class Claw {
     }
 
     public void close() {
+        Logger.log(Level.INFO, "Close claw");
         if (!closed) {
             motor.rotate(-2000, true);
             while (!motor.isStalled()) {
@@ -36,6 +41,7 @@ public class Claw {
             motor.stop();
         }
         closed = true;
+        Logger.log(Level.INFO, "Claw closed");
     }
     
     public void adjust(int angle) {
