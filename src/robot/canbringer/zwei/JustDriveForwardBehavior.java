@@ -13,14 +13,14 @@ public class JustDriveForwardBehavior implements Behavior {
 
     @Override
     public boolean takeControl() {
-        return cb.getUltrasonic().getDistance() > CanBringer.OBSTACLE_DISTANCE;
+        return !(cb.getTouchLeft().isPressed() || cb.getTouchRight().isPressed());
     }
 
     @Override
     public void action() {
         suppressed = false;
 
-        while (takeControl()) {
+        while (!suppressed) {
             // cb.getClaw().open();
             // System.out.println("Begin Stupidly Driving Forward...");
 

@@ -13,15 +13,15 @@ public class FoundObstacleBehavior implements Behavior {
 
     @Override
     public boolean takeControl() {
-        
-        return cb.getUltrasonic().getDistance() < CanBringer.OBSTACLE_DISTANCE;
+//        return cb.getUltrasonic().getDistance() < CanBringer.OBSTACLE_DISTANCE;
+        return cb.getTouchLeft().isPressed() || cb.getTouchRight().isPressed();
     }
 
     @Override
     public void action() {
         suppressed = false;
 
-        while (takeControl()) {
+        while (!suppressed) {
             // cb.getPilot().stop();
             // cb.getClaw().open();
             // System.out.println("Obstacle ahead ...");

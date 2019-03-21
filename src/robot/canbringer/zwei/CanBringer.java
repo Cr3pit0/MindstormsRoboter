@@ -16,8 +16,8 @@ import robot.Logger;
 
 public class CanBringer {
 
-	static final Port COLOR_SENSOR = SensorPort.S3;
-	static final Port ULTRASONIC_SENSOR = SensorPort.S2;
+    static final Port COLOR_SENSOR = SensorPort.S2;
+    static final Port ULTRASONIC_SENSOR = SensorPort.S3;
     static final Port TOUCH_SENSOR_LEFT = SensorPort.S1;
     static final Port TOUCH_SENSOR_RIGHT = SensorPort.S4;
 	static final Port CLAW_MOTOR = MotorPort.C;
@@ -59,8 +59,8 @@ public class CanBringer {
 			}
 		};
 
-        Wheel wheel1 = WheeledChassis.modelWheel(Motor.A, 56).offset(-67);
-        Wheel wheel2 = WheeledChassis.modelWheel(Motor.D, 56).offset(67);
+        Wheel wheel1 = WheeledChassis.modelWheel(Motor.A, 56).offset(-67).gearRatio(3).invert(true);
+        Wheel wheel2 = WheeledChassis.modelWheel(Motor.D, 56).offset(67).gearRatio(3).invert(true);
 		Chassis chassis = new WheeledChassis(new Wheel[] { wheel1, wheel2 }, 2);
 		pilot = new MovePilot(chassis);
         pilot.setAngularSpeed(50);
