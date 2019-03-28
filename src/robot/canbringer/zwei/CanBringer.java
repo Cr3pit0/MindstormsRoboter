@@ -31,7 +31,8 @@ public class CanBringer {
 	private Arbitrator arbitrator;
 	private StartupBehavior su;
     private JustDriveForwardBehavior jdf;
-    private FoundObstacleBehavior fo;
+    private ObstacleRightBehavior or;
+    private ObstacleLeftBehavior ol;
 
 	private ColorSensor color;
 	private UltrasonicSensor ultrasonic;
@@ -64,7 +65,7 @@ public class CanBringer {
 		Chassis chassis = new WheeledChassis(new Wheel[] { wheel1, wheel2 }, 2);
 		pilot = new MovePilot(chassis);
         pilot.setAngularSpeed(50);
-        pilot.setLinearSpeed(120);
+        pilot.setLinearSpeed(100);
 
 		ultrasonic = new UltrasonicSensor(startupCompletionListener, ULTRASONIC_SENSOR);
 		color = new ColorSensor(startupCompletionListener, COLOR_SENSOR);
@@ -73,13 +74,14 @@ public class CanBringer {
 
 		su = new StartupBehavior(this);
         jdf = new JustDriveForwardBehavior(this);
-        fo = new FoundObstacleBehavior(this);
-        arbitrator = new Arbitrator(new Behavior[] { jdf, fo, su });
+        or = new ObstacleRightBehavior(this);
+        ol = new ObstacleLeftBehavior(this);
+        arbitrator = new Arbitrator(new Behavior[] { jdf, or, ol, su });
 
-		new Thread(ultrasonic).start();
-		new Thread(color).start();
-        new Thread(touchLeft).start();
-        new Thread(touchRight).start();
+        ultrasonic.start();
+		color.start();
+        touchLeft.start();
+        touchRight.start();
 	}
 
 	public ColorSensor getColor() {

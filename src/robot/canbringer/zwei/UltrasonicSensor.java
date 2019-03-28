@@ -3,10 +3,8 @@ package robot.canbringer.zwei;
 import lejos.hardware.port.Port;
 import lejos.hardware.sensor.EV3UltrasonicSensor;
 import lejos.robotics.SampleProvider;
-import robot.Level;
-import robot.Logger;
 
-class UltrasonicSensor extends Sensor implements Runnable {
+class UltrasonicSensor extends Sensor {
 
     private volatile float distance;
     private EV3UltrasonicSensor ultrasonicSensor;
@@ -29,7 +27,7 @@ class UltrasonicSensor extends Sensor implements Runnable {
             float[] sample = new float[sp.sampleSize()];
             sp.fetchSample(sample, 0);
             distance = sample[0];
-            Logger.log(Level.INFO, "Distance: " + distance);
+//            Logger.log(Level.INFO, "Distance: " + distance);
         }
     }
 }

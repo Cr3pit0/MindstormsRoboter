@@ -26,7 +26,6 @@ public class StartupBehavior implements Behavior {
         // cb.getClaw().open();
         cb.setHomeColor(cb.getColor().getColor());
         cb.getPilot().rotate(-90);
-        initialized = true;
     }
 
     @Override

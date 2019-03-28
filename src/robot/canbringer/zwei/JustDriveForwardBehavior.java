@@ -13,7 +13,7 @@ public class JustDriveForwardBehavior implements Behavior {
 
     @Override
     public boolean takeControl() {
-        return !(cb.getTouchLeft().isPressed() || cb.getTouchRight().isPressed());
+        return true;
     }
 
     @Override

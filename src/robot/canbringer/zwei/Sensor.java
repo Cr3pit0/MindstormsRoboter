@@ -1,6 +1,6 @@
 package robot.canbringer.zwei;
 
-public class Sensor {
+public abstract class Sensor extends Thread {
 
     private StartupCompletionListener listener;
 
@@ -12,4 +12,7 @@ public class Sensor {
     protected final void startupComplete() {
         listener.setReady(this);
     }
+    
+    @Override
+    public abstract void run();
 }

@@ -4,7 +4,7 @@ import lejos.hardware.port.Port;
 import lejos.hardware.sensor.EV3ColorSensor;
 import lejos.robotics.SampleProvider;
 
-class ColorSensor extends Sensor implements Runnable {
+class ColorSensor extends Sensor {
 
     private volatile float color;
     private EV3ColorSensor colorSensor;

@@ -3,8 +3,11 @@ package robot.canbringer.zwei;
 import lejos.hardware.port.Port;
 import lejos.hardware.sensor.EV3TouchSensor;
 import lejos.robotics.SampleProvider;
+import robot.Level;
+import robot.Logger;
+import sun.rmi.runtime.Log;
 
-class TouchSensor extends Sensor implements Runnable {
+class TouchSensor extends Sensor {
 
     private volatile boolean pressed;
     private EV3TouchSensor touchSensor;
