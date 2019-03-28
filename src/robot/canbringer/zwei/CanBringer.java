@@ -31,8 +31,9 @@ public class CanBringer {
 	private Arbitrator arbitrator;
 	private StartupBehavior su;
     private JustDriveForwardBehavior jdf;
-    private ObstacleRightBehavior or;
-    private ObstacleLeftBehavior ol;
+//    private ObstacleRightBehavior or;
+//    private ObstacleLeftBehavior ol;
+    private ObstacleBehavior o;
 
 	private ColorSensor color;
 	private UltrasonicSensor ultrasonic;
@@ -74,9 +75,8 @@ public class CanBringer {
 
 		su = new StartupBehavior(this);
         jdf = new JustDriveForwardBehavior(this);
-        or = new ObstacleRightBehavior(this);
-        ol = new ObstacleLeftBehavior(this);
-        arbitrator = new Arbitrator(new Behavior[] { jdf, or, ol, su });
+        o = new ObstacleBehavior(this);
+        arbitrator = new Arbitrator(new Behavior[] { jdf, o, su });
 
         ultrasonic.start();
 		color.start();
