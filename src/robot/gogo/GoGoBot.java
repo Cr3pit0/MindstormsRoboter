@@ -8,6 +8,7 @@ import lejos.hardware.lcd.LCD;
 import lejos.hardware.motor.Motor;
 import lejos.hardware.port.Port;
 import lejos.hardware.port.SensorPort;
+import lejos.hardware.sensor.EV3ColorSensor;
 import lejos.hardware.sensor.EV3TouchSensor;
 import lejos.robotics.RegulatedMotor;
 import lejos.robotics.SampleProvider;
@@ -19,16 +20,12 @@ public class GoGoBot {
 	public static void introMessage() {
 
 		GraphicsLCD g = LocalEV3.get().getGraphicsLCD();
-		g.drawString("Bumper Car Demo", 5, 0, 0);
+		g.drawString("ZernichtungsBot 3000", 5, 0, 0);
 		g.setFont(Font.getSmallFont());
-		g.drawString("Demonstration of the Behavior", 2, 20, 0);
-		g.drawString("subsumption classes. Requires", 2, 30, 0);
-		g.drawString("a wheeled vehicle with two", 2, 40, 0);
-		g.drawString("independently controlled", 2, 50, 0);
-		g.drawString("motors connected to motor", 2, 60, 0);
-		g.drawString("ports B and C, and an", 2, 70, 0);
-		g.drawString("infrared sensor connected", 2, 80, 0);
-		g.drawString("to port 4.", 2, 90, 0);
+		g.drawString("Super Simpler Can Bringer Bot.", 2, 20, 0);
+		g.drawString("Sollte an der Wand entlang der ", 2, 30, 0);
+		g.drawString("Arena fahren um dabei dann", 2, 40, 0);
+		g.drawString("Dosen zu sammeln...", 2, 50, 0);
 
 		// Quit GUI button:
 		g.setFont(Font.getSmallFont()); // can also get specific size using Font.getFont()
@@ -56,9 +53,14 @@ public class GoGoBot {
 
 	static TouchSensor sensor1;
 	static TouchSensor sensor2;
+	static ColorSensor sensor3;
+	
+	static SuperImportantThread sit;
 
-	static RegulatedMotor leftMotor = Motor.B;
-	static RegulatedMotor rightMotor = Motor.C;
+	static RegulatedMotor leftMotor = Motor.A;
+	static RegulatedMotor rightMotor = Motor.D;
+	
+	static float HomeColor;
 
 	public static void main(String[] args) throws InterruptedException {
 
@@ -71,7 +73,15 @@ public class GoGoBot {
 		sensor2 = new TouchSensor(SensorPort.S4);
 		sensor2.setDaemon(true);
 		sensor2.start();
-
+		
+		sensor3 = new ColorSensor(SensorPort.S2);
+		sensor3.setDaemon(true);
+		sensor3.start();
+		
+//		sit = new SuperImportantThread();
+//		sit.setDaemon(true);
+//		sit.start();
+		
 		leftMotor.resetTachoCount();
 		rightMotor.resetTachoCount();
 		leftMotor.rotateTo(0);
@@ -80,13 +90,16 @@ public class GoGoBot {
 		rightMotor.setSpeed(400);
 		leftMotor.setAcceleration(800);
 		rightMotor.setAcceleration(800);
+		
+		HomeColor = sensor3.getColor();
 
 		Behavior b1 = new DriveForward();
 		Behavior b2 = new DetectWall();
+		Behavior b3 = new DetectHome();
 
-		Behavior[] behaviorList = { b1, b2 };
+		Behavior[] behaviorList = { b1, b2};
 		Arbitrator arbitrator = new Arbitrator(behaviorList);
-		LCD.drawString("Bumper Car", 0, 1);
+		LCD.drawString("Can Bringer", 0, 1);
 		Button.LEDPattern(6);
 		Button.waitForAnyPress();
 		arbitrator.go();
@@ -138,12 +151,9 @@ class DriveForward implements Behavior {
 class DetectWall implements Behavior {
 
 	public DetectWall() {
-		// touch = new TouchSensor(SensorPort.S1);
-		// sonar = new UltrasonicSensor(SensorPort.S3);
 	}
 
-	private boolean checkTouched() {
-
+	public boolean takeControl() {
 		int touch1 = GoGoBot.sensor1.touch;
 		int touch2 = GoGoBot.sensor2.touch;
 
@@ -156,15 +166,12 @@ class DetectWall implements Behavior {
 		}
 	}
 
-	public boolean takeControl() {
-		return checkTouched();
-	}
-
 	public void suppress() {
 		// Since this is highest priority behavior, suppress will never be called.
 	}
 
 	public void action() {
+		
 		
 		int drive = 0;
 		
@@ -173,28 +180,69 @@ class DetectWall implements Behavior {
 		} else if (GoGoBot.sensor1.touch == 0 && GoGoBot.sensor2.touch == 1) {
 			drive = 2;
 		}
+		
+		int rotationDegree = 200;
 
 		switch (drive) {
 		case 0:
-			GoGoBot.leftMotor.rotate(180, true);
-			GoGoBot.rightMotor.rotate(180);
+			GoGoBot.leftMotor.rotate(rotationDegree, true);
+			GoGoBot.rightMotor.rotate(rotationDegree);
 			break;
 		case 1:
-			GoGoBot.leftMotor.rotate(180, true);
-			GoGoBot.rightMotor.rotate(180);
-//			GoGoBot.rightMotor.rotate(360, true);
-			GoGoBot.leftMotor.rotate(180);
+			GoGoBot.leftMotor.rotate(rotationDegree, true);
+			GoGoBot.rightMotor.rotate(rotationDegree);
+			GoGoBot.leftMotor.rotate(-rotationDegree, true);
+			GoGoBot.rightMotor.rotate(rotationDegree);
 
 			break;
 		case 2:
-			GoGoBot.leftMotor.rotate(180, true);
-			GoGoBot.rightMotor.rotate(180);
-//			GoGoBot.leftMotor.rotate(360, true);
-			GoGoBot.rightMotor.rotate(180);
+			GoGoBot.leftMotor.rotate(rotationDegree, true);
+			GoGoBot.rightMotor.rotate(rotationDegree);
+			GoGoBot.leftMotor.rotate(rotationDegree, true);
+			GoGoBot.rightMotor.rotate(-rotationDegree);
+			
 			break;
 		default:
 
 			break;
+		}
+	}
+}
+
+class DetectHome implements Behavior {
+
+	private boolean _suppressed = false;
+	
+	private boolean isHome = true;
+
+	public boolean takeControl() {
+		
+		if(GoGoBot.sensor3.getColor() == GoGoBot.HomeColor && !isHome) {
+			isHome = true;
+			return true;
+		}
+		else {
+			isHome = false;
+			return false;
+		}
+	}
+
+	public void suppress() {
+		_suppressed = true;// standard practice for suppress methods
+	}
+
+	public void action() {
+		_suppressed = false;
+		
+		while (!_suppressed) {
+			
+			GoGoBot.leftMotor.rotate(360, true);
+			GoGoBot.rightMotor.rotate(360);
+			
+			GoGoBot.leftMotor.stop();
+			GoGoBot.rightMotor.stop();
+
+			Thread.yield(); // don't exit till suppressed
 		}
 	}
 }
@@ -218,4 +266,29 @@ class TouchSensor extends Thread {
 			touch = (int) sample[0];
 		}
 	}
+}
+
+class ColorSensor extends Thread {
+
+    private volatile float color;
+    private EV3ColorSensor colorSensor;
+    private SampleProvider sp;
+
+    ColorSensor(Port port) {
+        colorSensor = new EV3ColorSensor(port);
+        sp = colorSensor.getColorIDMode();
+    }
+
+    float getColor() {
+        return color;
+    }
+
+    @Override
+    public void run() {
+        while (true) {
+            float[] sample = new float[sp.sampleSize()];
+            sp.fetchSample(sample, 0);
+            color = sample[0];
+        }
+    }
 }

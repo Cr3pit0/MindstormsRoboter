@@ -14,7 +14,7 @@ import lejos.robotics.navigation.Navigator;
 import lejos.robotics.subsumption.Arbitrator;
 import lejos.robotics.subsumption.Behavior;
 
-public class CanBringer {
+public class CanBringer{
 
     static final Port COLOR_SENSOR = SensorPort.S3;
     static final Port ULTRASONIC_SENSOR = SensorPort.S2;
