@@ -43,7 +43,7 @@ enum Durations {
 	
 	private int factor;
 	// Ausgehend von Sechsehnteln aus...
-	private int basicDuration = 70;
+	private int basicDuration = 120;
 	
 	Durations(int _factor){
 		this.factor = _factor;

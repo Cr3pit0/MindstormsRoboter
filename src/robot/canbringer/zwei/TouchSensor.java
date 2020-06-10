@@ -5,7 +5,6 @@ import lejos.hardware.sensor.EV3TouchSensor;
 import lejos.robotics.SampleProvider;
 import robot.Level;
 import robot.Logger;
-import sun.rmi.runtime.Log;
 
 class TouchSensor extends Sensor {
 
